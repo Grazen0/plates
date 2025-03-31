@@ -2,8 +2,19 @@
 name = "plates"
 version = "0.1.0"
 edition = "2024"
+license = "MIT"
+authors = ["José Daniel Grayson <josedanielgrayson@proton.me>"]
+description = "A neat CLI program to manage file (tem)plates."
+repository = "https://github.com/Grazen0/plates"
+homepage = "https://github.com/Grazen0/plates?tab=readme-ov-file#readme"
 
 [dependencies]
 clap = { version = "4.5.34", features = ["derive"] }
-serde = "1.0.219"
+crossterm = "0.28.1"
+derive_more = { version = "2.0.1", features = ["display", "error", "from", "is_variant"] }
+inquire = "0.7.5"
+lazy-regex = "3.4.1"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_either = "0.2.1"
 serde_yaml = "0.9.34"
+xdg = "2.5.2"
