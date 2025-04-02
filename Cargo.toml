@@ -18,3 +18,8 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_either = "0.2.1"
 serde_yaml = "0.9.34"
 xdg = "2.5.2"
+
+[build-dependencies]
+clap = { version = "4.5.34", features = ["derive"] }
+clap_complete = "4.5.47"
+clap_mangen = "0.2.26"
