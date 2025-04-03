@@ -39,14 +39,14 @@ fn main() -> io::Result<()> {
     println!("cargo::rerun-if-changed=src");
 
     let bin = env!("CARGO_PKG_NAME");
-    let out_dir = env::var_os("OUT_DIR").unwrap_or("out".into());
+    let out_dir = "out";
 
     if env::var_os("PLATES_GEN_MAN_PAGES").is_some() {
-        generate_man_pages(&out_dir, bin)?;
+        generate_man_pages(out_dir, bin)?;
     }
 
     if env::var_os("PLATES_GEN_COMPLETIONS").is_some() {
-        generate_completions(&out_dir, bin)?;
+        generate_completions(out_dir, bin)?;
     }
 
     Ok(())
