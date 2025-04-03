@@ -1,10 +1,9 @@
 use std::{
-    fs::{self, DirEntry, File},
+    fs::{self, File},
     io,
     path::PathBuf,
 };
 
-use indexmap::IndexMap;
 use serde::Deserialize;
 
 use crate::{error::PlatesError, placeholder::Placeholder};
