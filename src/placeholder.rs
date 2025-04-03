@@ -6,7 +6,7 @@ use serde_either::StringOrStruct;
 
 use crate::PlatesError;
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DefaultValueType {
     #[default]
@@ -18,8 +18,8 @@ pub enum DefaultValueType {
 #[derive(Debug, Clone, Deserialize)]
 pub struct DefaultValue {
     #[serde(rename = "type")]
-    kind: DefaultValueType,
-    value: String,
+    pub kind: DefaultValueType,
+    pub value: String,
 }
 
 impl DefaultValue {
