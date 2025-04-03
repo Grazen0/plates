@@ -8,6 +8,7 @@ use std::{collections::HashMap, io};
 
 use args::{Args, Command};
 use clap::{Parser, error::Result};
+use config::get_templates_dir;
 use crossterm::{
     ExecutableCommand,
     terminal::{self, ClearType},
@@ -16,12 +17,11 @@ use error::PlatesError;
 use inquire::{Confirm, InquireError, Select};
 
 fn try_main(args: Args) -> Result<(), PlatesError> {
-    let templates_dir = config::get_config_dir()?.join("templates");
-    let templates = config::get_template_dir_entries(&templates_dir)?;
+    let templates = config::get_template_names()?;
 
     match args.command {
         Command::List => {
-            for template_name in templates.keys() {
+            for template_name in templates {
                 println!("{template_name}");
             }
         }
@@ -36,7 +36,7 @@ fn try_main(args: Args) -> Result<(), PlatesError> {
 
             template
                 .as_ref()
-                .is_none_or(|t| templates.contains_key(t))
+                .is_none_or(|t| templates.contains(t))
                 .then_some(())
                 .ok_or(PlatesError::NonExistentTemplate)?;
 
@@ -53,16 +53,12 @@ fn try_main(args: Args) -> Result<(), PlatesError> {
                     .ok_or(PlatesError::Inquire(InquireError::OperationCanceled))?;
             }
 
-            let selected_template = template.as_ref().map(Ok).unwrap_or_else(|| {
-                Select::new(
-                    "Which template should I generate?",
-                    templates.keys().collect(),
-                )
-                .prompt()
+            let selected_template_name = template.map(Ok).unwrap_or_else(|| {
+                Select::new("Which template should I generate?", templates).prompt()
             })?;
 
-            let template_dir = templates_dir.join(selected_template);
-            let template_config = config::get_template_config(&template_dir)?.unwrap_or_default();
+            let template_config =
+                config::get_template_config(&selected_template_name)?.unwrap_or_default();
 
             let placeholder_values: HashMap<_, _> = template_config
                 .placeholders
@@ -74,7 +70,9 @@ fn try_main(args: Args) -> Result<(), PlatesError> {
                 })
                 .collect::<Result<_, _>>()?;
 
-            println!("Rendering {selected_template}...");
+            let template_dir = get_templates_dir()?.join(&selected_template_name);
+
+            println!("Rendering {selected_template_name}...");
             render::render_template(&template_dir, &dest, overwrite, &placeholder_values)?;
             println!("Done!");
         }

@@ -1,7 +1,7 @@
 use std::{
     fs::{self, DirEntry, File},
     io,
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 use indexmap::IndexMap;
@@ -21,26 +21,28 @@ pub fn get_config_dir() -> Result<PathBuf, xdg::BaseDirectoriesError> {
     Ok(dirs.get_config_home().join("plates"))
 }
 
-pub fn get_template_dir_entries(dir: &Path) -> io::Result<IndexMap<String, DirEntry>> {
-    let entries: Vec<_> = dir.read_dir()?.collect::<Result<_, _>>()?;
-
-    let mut entry_map: IndexMap<_, _> = entries
-        .into_iter()
-        .filter(|entry| entry.file_type().is_ok_and(|ft| ft.is_dir()))
-        .map(|entry| {
-            let template_name = entry.file_name().to_string_lossy().into_owned();
-            (template_name, entry)
-        })
-        .collect();
-
-    entry_map.sort_unstable_keys();
-    Ok(entry_map)
+pub fn get_templates_dir() -> Result<PathBuf, xdg::BaseDirectoriesError> {
+    let config_dir = get_config_dir()?;
+    Ok(config_dir.join("templates"))
 }
 
-pub fn get_template_config(
-    template_dir: impl AsRef<Path>,
-) -> Result<Option<TemplateConfig>, PlatesError> {
-    let config_path = template_dir.as_ref().join(TEMPLATE_CONFIG_FILE);
+pub fn get_template_names() -> io::Result<Vec<String>> {
+    let templates_dir = get_templates_dir()?;
+    let entries: Vec<_> = templates_dir.read_dir()?.collect::<Result<_, _>>()?;
+
+    let mut names: Vec<_> = entries
+        .into_iter()
+        .filter(|entry| entry.file_type().is_ok_and(|ft| ft.is_dir()))
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .collect();
+
+    names.sort_unstable();
+    Ok(names)
+}
+
+pub fn get_template_config(template_name: &str) -> Result<Option<TemplateConfig>, PlatesError> {
+    let templates_dir = get_templates_dir()?;
+    let config_path = templates_dir.join(template_name).join(TEMPLATE_CONFIG_FILE);
 
     fs::exists(&config_path)?
         .then(|| {
