@@ -10,6 +10,7 @@ This project is very much inspired from [copier]. I just wanted to see if I coul
 
 - [x] Placeholder support.
 - [ ] Different placeholder types (number, select, etc).
+- [x] Placeholders within directory names.
 - [ ] Shell completions with available templates.
 - [x] Man pages.
 

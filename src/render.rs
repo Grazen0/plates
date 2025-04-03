@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    ffi::OsString,
     fs, io,
     path::{Path, PathBuf},
 };
@@ -46,43 +47,45 @@ fn replace_placeholders(text: &str, placeholder_values: &HashMap<String, String>
 }
 
 pub fn render_template(
-    src: impl AsRef<Path>,
-    dest: impl AsRef<Path>,
+    root_src: impl AsRef<Path>,
+    root_dest: impl AsRef<Path>,
     overwrite: bool,
     placeholder_values: &HashMap<String, String>,
 ) -> io::Result<()> {
-    let mut stack = vec![PathBuf::new()];
+    let mut stack = vec![(root_src.as_ref().to_owned(), root_dest.as_ref().to_owned())];
 
-    while let Some(path) = stack.pop() {
-        let path_src = src.as_ref().join(&path);
-
-        if path_src == PathBuf::from(TEMPLATE_CONFIG_FILE) {
+    while let Some((src, dest)) = stack.pop() {
+        if src == PathBuf::from(TEMPLATE_CONFIG_FILE) {
             continue;
         }
 
-        let path_dest = dest.as_ref().join(&path);
-
-        if path_src.is_dir() {
-            if !fs::exists(&path_dest)? {
-                fs::create_dir_all(&path_dest)?;
+        if src.is_dir() {
+            if !fs::exists(&dest)? {
+                fs::create_dir_all(&dest)?;
             }
 
-            for entry in fs::read_dir(path_src)? {
-                let entry = entry?;
-                stack.push(path.join(entry.file_name()));
+            for entry in fs::read_dir(&src)? {
+                let file_name = entry?.file_name();
+                let file_name_replaced = file_name
+                    .clone()
+                    .into_string()
+                    .map(|s| OsString::from(replace_placeholders(&s, placeholder_values)))
+                    .unwrap_or_else(|s| s);
+
+                stack.push((src.join(file_name), dest.join(file_name_replaced)));
             }
         } else {
-            let src_contents = fs::read_to_string(path_src)?;
+            let src_contents = fs::read_to_string(src)?;
             let src_contents_replaced = replace_placeholders(&src_contents, placeholder_values);
 
-            let dest_exists = path_dest.try_exists()?;
+            let dest_exists = dest.try_exists()?;
 
             let dest_contents = dest_exists
-                .then(|| fs::read_to_string(&path_dest).map(Some))
+                .then(|| fs::read_to_string(&dest).map(Some))
                 .unwrap_or(Ok(None))?;
 
             let is_identical =
-                dest_contents.is_some_and(|dest_contents| src_contents == dest_contents);
+                dest_contents.is_some_and(|dest_contents| src_contents_replaced == dest_contents);
 
             let action = if !dest_exists {
                 FileAction::Create
@@ -94,10 +97,10 @@ pub fn render_template(
                 FileAction::Exists
             };
 
-            println!("{} {}", action.stylized(), path_dest.to_string_lossy());
+            println!("{} {}", action.stylized(), dest.to_string_lossy());
 
             if action.is_create() || action.is_overwrite() {
-                fs::write(&path_dest, &src_contents_replaced)?;
+                fs::write(&dest, &src_contents_replaced)?;
             }
         }
     }
