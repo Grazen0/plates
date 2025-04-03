@@ -1,10 +1,10 @@
 use std::{
-    collections::HashMap,
     fs::{self, DirEntry, File},
     io,
     path::{Path, PathBuf},
 };
 
+use indexmap::IndexMap;
 use serde::Deserialize;
 
 use crate::{error::PlatesError, placeholder::Placeholder};
@@ -21,10 +21,10 @@ pub fn get_config_dir() -> Result<PathBuf, xdg::BaseDirectoriesError> {
     Ok(dirs.get_config_home().join("plates"))
 }
 
-pub fn get_template_dir_entries(dir: &Path) -> io::Result<HashMap<String, DirEntry>> {
+pub fn get_template_dir_entries(dir: &Path) -> io::Result<IndexMap<String, DirEntry>> {
     let entries: Vec<_> = dir.read_dir()?.collect::<Result<_, _>>()?;
 
-    let entry_map: HashMap<_, _> = entries
+    let mut entry_map: IndexMap<_, _> = entries
         .into_iter()
         .filter(|entry| entry.file_type().is_ok_and(|ft| ft.is_dir()))
         .map(|entry| {
@@ -32,6 +32,8 @@ pub fn get_template_dir_entries(dir: &Path) -> io::Result<HashMap<String, DirEnt
             (template_name, entry)
         })
         .collect();
+
+    entry_map.sort_unstable_keys();
     Ok(entry_map)
 }
 

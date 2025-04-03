@@ -465,6 +465,7 @@ dependencies = [
  "clap_mangen",
  "crossterm 0.28.1",
  "derive_more",
+ "indexmap",
  "inquire",
  "lazy-regex",
  "serde",
