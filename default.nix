@@ -9,7 +9,7 @@
 in
   rustPlatform.buildRustPackage rec {
     pname = name;
-    version = manifest.version;
+    inherit (manifest) version;
     src = lib.cleanSource ./.;
     cargoLock.lockFile = "${src}/Cargo.lock";
 
