@@ -1,6 +1,9 @@
 use std::{collections::HashMap, env};
 
-use inquire::Text;
+use inquire::{
+    Text,
+    ui::{Color, RenderConfig, Styled},
+};
 use serde::Deserialize;
 use serde_either::StringOrStruct;
 
@@ -61,7 +64,10 @@ impl Placeholder {
             .clone()
             .unwrap_or_else(|| format!("{}:", self.name));
 
-        let mut prompt = Text::new(&message);
+        let mut prompt = Text::new(&message).with_render_config(
+            RenderConfig::default_colored()
+                .with_prompt_prefix(Styled::new("%").with_fg(Color::DarkBlue)),
+        );
         let default_input: String;
 
         if let Some(placeholder_default) = self.default.as_ref() {
