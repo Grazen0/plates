@@ -3,18 +3,19 @@ mod config;
 mod error;
 mod placeholder;
 mod render;
+mod shell;
 
-use std::{collections::HashMap, io};
+use std::io;
 
 use args::{Args, Command};
 use clap::{Parser, error::Result};
-use config::get_templates_dir;
 use crossterm::{
     ExecutableCommand,
     terminal::{self, ClearType},
 };
 use error::PlatesError;
 use inquire::{Confirm, InquireError, Select};
+use placeholder::PlaceholderValueMap;
 
 fn try_main(args: Args) -> Result<(), PlatesError> {
     let templates = config::get_template_names()?;
@@ -40,6 +41,10 @@ fn try_main(args: Args) -> Result<(), PlatesError> {
                 .then_some(())
                 .ok_or(PlatesError::NonExistentTemplate)?;
 
+            (!dest.is_file())
+                .then_some(())
+                .ok_or(PlatesError::PathIsFile)?;
+
             let is_dest_empty = dest
                 .read_dir()
                 .map(|mut items| items.next().is_none())
@@ -60,20 +65,26 @@ fn try_main(args: Args) -> Result<(), PlatesError> {
             let template_config =
                 config::get_template_config(&selected_template_name)?.unwrap_or_default();
 
-            let placeholder_values: HashMap<_, _> = template_config
-                .placeholders
-                .into_iter()
-                .map(|placeholder| {
-                    placeholder
-                        .inquire_value()
-                        .map(|value| (placeholder.name.clone(), value))
-                })
-                .collect::<Result<_, _>>()?;
+            let mut placeholder_values = PlaceholderValueMap::new();
 
-            let template_dir = get_templates_dir()?.join(&selected_template_name);
+            placeholder_values.insert("plates_dir".to_owned(), dest.to_string_lossy().into_owned());
+            placeholder_values.insert(
+                "plates_dir_basename".to_owned(),
+                dest.file_name().unwrap().to_string_lossy().into_owned(),
+            );
+
+            placeholder::inquire_placeholders(
+                template_config.placeholders,
+                &mut placeholder_values,
+            )?;
 
             println!("Rendering {selected_template_name}...");
-            render::render_template(&template_dir, &dest, overwrite, &placeholder_values)?;
+            render::render_template(
+                &selected_template_name,
+                &dest,
+                overwrite,
+                &placeholder_values,
+            )?;
             println!("Done!");
         }
     }
@@ -93,7 +104,7 @@ fn main() {
             | PlatesError::Inquire(InquireError::OperationInterrupted) => {
                 println!("Operation cancelled!")
             }
-            _ => eprintln!("{}", err),
+            _ => eprintln!("Error: {}", err),
         }
     }
 }

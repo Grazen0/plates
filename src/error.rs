@@ -19,4 +19,6 @@ pub enum PlatesError {
     NoTemplates,
     #[display("non-existent template")]
     NonExistentTemplate,
+    #[display("the given path is a file")]
+    PathIsFile,
 }

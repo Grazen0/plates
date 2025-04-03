@@ -1,14 +1,8 @@
-use std::{
-    fs::{self, File},
-    io,
-    path::PathBuf,
-};
+use std::{fs::File, io, path::PathBuf};
 
 use serde::Deserialize;
 
 use crate::{error::PlatesError, placeholder::Placeholder};
-
-pub const TEMPLATE_CONFIG_FILE: &str = "_plates.yml";
 
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct TemplateConfig {
@@ -39,15 +33,23 @@ pub fn get_template_names() -> io::Result<Vec<String>> {
     Ok(names)
 }
 
-pub fn get_template_config(template_name: &str) -> Result<Option<TemplateConfig>, PlatesError> {
+pub fn get_template_dir(template_name: &str) -> io::Result<PathBuf> {
     let templates_dir = get_templates_dir()?;
-    let config_path = templates_dir.join(template_name).join(TEMPLATE_CONFIG_FILE);
+    Ok(templates_dir.join(template_name))
+}
 
-    fs::exists(&config_path)?
-        .then(|| {
-            File::open(config_path)
-                .map_err(PlatesError::from)
-                .and_then(|rdr| serde_yaml::from_reader(rdr).map_err(PlatesError::from))
-        })
-        .unwrap_or(Ok(None))
+pub fn get_template_config_path(template_name: &str) -> io::Result<PathBuf> {
+    let template_dir = get_template_dir(template_name)?;
+    Ok(template_dir.join("_plates.yml"))
+}
+
+pub fn get_template_config(template_name: &str) -> Result<Option<TemplateConfig>, PlatesError> {
+    let config_path = get_template_config_path(template_name)?;
+
+    if config_path.is_file() {
+        let reader = File::open(config_path)?;
+        Ok(serde_yaml::from_reader(reader)?)
+    } else {
+        Ok(None)
+    }
 }

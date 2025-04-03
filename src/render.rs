@@ -1,15 +1,14 @@
-use std::{
-    collections::HashMap,
-    ffi::OsString,
-    fs, io,
-    path::{Path, PathBuf},
-};
+use std::{ffi::OsString, fs, io, path::Path};
 
 use crossterm::style::{StyledContent, Stylize};
 use derive_more::{Display, IsVariant};
 use lazy_regex::regex_replace_all;
 
-use crate::config::TEMPLATE_CONFIG_FILE;
+use crate::{
+    config::{get_template_config_path, get_template_dir},
+    placeholder::PlaceholderValueMap,
+    shell,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Display, IsVariant)]
 pub enum FileAction {
@@ -35,30 +34,43 @@ impl FileAction {
     }
 }
 
-fn replace_placeholders(text: &str, placeholder_values: &HashMap<String, String>) -> String {
-    regex_replace_all!(r#"\{\{\s*(\w+)\s*}}"#, text, |original: &str, name| {
-        placeholder_values
-            .get(name)
-            .map(String::as_ref)
-            .unwrap_or(original)
-            .to_owned()
-    })
+// TODO: transform with |> syntax
+pub fn replace_placeholders(text: &str, placeholder_values: &PlaceholderValueMap) -> String {
+    regex_replace_all!(
+        r#"\{\{\s*(\w+)\s*(?:\|>\s*(.*?)\s*)?}}"#,
+        text,
+        |original: &str, name, cmd: &str| {
+            let value = placeholder_values
+                .get(name)
+                .map(String::as_ref)
+                .unwrap_or(original)
+                .to_owned();
+
+            if cmd.is_empty() {
+                value
+            } else {
+                let output =
+                    shell::run_command_with_stdin(cmd, value).expect("shell command failed");
+
+                String::from_utf8_lossy(output.stdout.trim_ascii()).into_owned()
+            }
+        }
+    )
     .into_owned()
 }
 
 pub fn render_template(
-    root_src: impl AsRef<Path>,
+    template_name: &str,
     root_dest: impl AsRef<Path>,
     overwrite: bool,
-    placeholder_values: &HashMap<String, String>,
+    placeholder_values: &PlaceholderValueMap,
 ) -> io::Result<()> {
-    let mut stack = vec![(root_src.as_ref().to_owned(), root_dest.as_ref().to_owned())];
+    let template_dir = get_template_dir(template_name)?;
+    let template_config_path = get_template_config_path(template_name)?;
+
+    let mut stack = vec![(template_dir, root_dest.as_ref().to_owned())];
 
     while let Some((src, dest)) = stack.pop() {
-        if src == PathBuf::from(TEMPLATE_CONFIG_FILE) {
-            continue;
-        }
-
         if src.is_dir() {
             if !fs::exists(&dest)? {
                 fs::create_dir_all(&dest)?;
@@ -74,7 +86,7 @@ pub fn render_template(
 
                 stack.push((src.join(file_name), dest.join(file_name_replaced)));
             }
-        } else {
+        } else if src != template_config_path {
             let src_contents = fs::read_to_string(src)?;
             let src_contents_replaced = replace_placeholders(&src_contents, placeholder_values);
 

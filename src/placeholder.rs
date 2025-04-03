@@ -1,10 +1,12 @@
-use std::{env, process};
+use std::{collections::HashMap, env};
 
 use inquire::Text;
 use serde::Deserialize;
 use serde_either::StringOrStruct;
 
-use crate::PlatesError;
+use crate::{PlatesError, render, shell};
+
+pub type PlaceholderValueMap = HashMap<String, String>;
 
 #[derive(Debug, Clone, Copy, Default, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -27,10 +29,7 @@ impl DefaultValue {
         match self.kind {
             DefaultValueType::Str => Ok(self.value.clone()),
             DefaultValueType::Shell => {
-                let output = process::Command::new("/bin/sh")
-                    .arg("-c")
-                    .arg(&self.value)
-                    .output()?;
+                let output = shell::create_shell_command(&self.value).output()?;
 
                 if !output.status.success() {
                     Err(PlatesError::Shell(output.status))
@@ -53,7 +52,10 @@ pub struct Placeholder {
 }
 
 impl Placeholder {
-    pub fn inquire_value(&self) -> Result<String, PlatesError> {
+    pub fn inquire_value(
+        &self,
+        placeholder_values: &PlaceholderValueMap,
+    ) -> Result<String, PlatesError> {
         let message = self
             .message
             .clone()
@@ -63,13 +65,25 @@ impl Placeholder {
         let default_input: String;
 
         if let Some(placeholder_default) = self.default.as_ref() {
-            default_input = match placeholder_default {
+            let unreplaced_default = match placeholder_default {
                 StringOrStruct::String(s) => s.clone(),
                 StringOrStruct::Struct(def) => def.eval()?,
             };
+            default_input = render::replace_placeholders(&unreplaced_default, placeholder_values);
             prompt = prompt.with_default(&default_input);
         }
 
         Ok(prompt.prompt()?)
     }
+}
+
+pub fn inquire_placeholders(
+    placeholders: Vec<Placeholder>,
+    placeholder_values: &mut PlaceholderValueMap,
+) -> Result<(), PlatesError> {
+    for placeholder in placeholders {
+        let value = placeholder.inquire_value(placeholder_values)?;
+        placeholder_values.insert(placeholder.name, value);
+    }
+    Ok(())
 }
