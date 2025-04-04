@@ -76,7 +76,10 @@ impl Placeholder {
                 StringOrStruct::Struct(def) => def.eval()?,
             };
             default_input = render::replace_placeholders(&unreplaced_default, placeholder_values);
-            prompt = prompt.with_default(&default_input);
+
+            if !default_input.is_empty() {
+                prompt = prompt.with_default(&default_input);
+            }
         }
 
         Ok(prompt.prompt()?)
