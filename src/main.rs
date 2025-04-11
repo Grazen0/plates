@@ -70,12 +70,7 @@ fn try_main(args: Args) -> Result<(), PlatesError> {
             placeholder_values.insert("plates_dir".to_owned(), dest.to_string_lossy().into_owned());
             placeholder_values.insert(
                 "plates_dir_basename".to_owned(),
-                dest.canonicalize()
-                    .unwrap()
-                    .file_name()
-                    .unwrap()
-                    .to_string_lossy()
-                    .into_owned(),
+                dest.file_name().unwrap().to_string_lossy().into_owned(),
             );
 
             placeholder::inquire_placeholders(
