@@ -34,7 +34,6 @@ impl FileAction {
     }
 }
 
-// TODO: transform with |> syntax
 pub fn replace_placeholders(text: &str, placeholder_values: &PlaceholderValueMap) -> String {
     regex_replace_all!(
         r#"\{\{\s*(\w+)\s*(?:\|>\s*(.*?)\s*)?}}"#,
