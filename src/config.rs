@@ -2,7 +2,7 @@ use std::{fs::File, io, path::PathBuf};
 
 use serde::Deserialize;
 
-use crate::{error::PlatesError, placeholder::Placeholder};
+use crate::{error::PlatesResult, placeholder::Placeholder};
 
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct TemplateConfig {
@@ -29,7 +29,7 @@ pub fn get_template_names() -> io::Result<Vec<String>> {
         .map(|entry| entry.file_name().to_string_lossy().into_owned())
         .collect();
 
-    names.sort_unstable();
+    names.sort();
     Ok(names)
 }
 
@@ -43,7 +43,7 @@ pub fn get_template_config_path(template_name: &str) -> io::Result<PathBuf> {
     Ok(template_dir.join("_plates.yml"))
 }
 
-pub fn get_template_config(template_name: &str) -> Result<Option<TemplateConfig>, PlatesError> {
+pub fn get_template_config(template_name: &str) -> PlatesResult<Option<TemplateConfig>> {
     let config_path = get_template_config_path(template_name)?;
 
     if config_path.is_file() {

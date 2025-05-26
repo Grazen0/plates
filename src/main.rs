@@ -8,16 +8,16 @@ mod shell;
 use std::io;
 
 use args::{Args, Command};
-use clap::{Parser, error::Result};
+use clap::Parser;
 use crossterm::{
     ExecutableCommand,
     terminal::{self, ClearType},
 };
-use error::PlatesError;
+use error::{PlatesError, PlatesResult};
 use inquire::{Confirm, InquireError, Select};
 use placeholder::PlaceholderValueMap;
 
-fn try_main(args: Args) -> Result<(), PlatesError> {
+fn try_main(args: Args) -> PlatesResult<()> {
     let templates = config::get_template_names()?;
 
     match args.command {
@@ -33,7 +33,7 @@ fn try_main(args: Args) -> Result<(), PlatesError> {
         } => {
             (!templates.is_empty())
                 .then_some(())
-                .ok_or(PlatesError::NoTemplates)?;
+                .ok_or(PlatesError::NoTemplatesAvailable)?;
 
             template
                 .as_ref()
@@ -100,10 +100,9 @@ fn main() {
         let _ = io::stdout().execute(terminal::Clear(ClearType::CurrentLine));
 
         match err {
-            PlatesError::Inquire(InquireError::OperationCanceled)
-            | PlatesError::Inquire(InquireError::OperationInterrupted) => {
-                println!("Operation cancelled!")
-            }
+            PlatesError::Inquire(
+                InquireError::OperationCanceled | InquireError::OperationInterrupted,
+            ) => println!("Operation cancelled!"),
             _ => eprintln!("Error: {}", err),
         }
     }

@@ -7,7 +7,7 @@ use inquire::{
 use serde::Deserialize;
 use serde_either::StringOrStruct;
 
-use crate::{PlatesError, render, shell};
+use crate::{PlatesError, error::PlatesResult, render, shell};
 
 pub type PlaceholderValueMap = HashMap<String, String>;
 
@@ -28,7 +28,7 @@ pub struct DefaultValue {
 }
 
 impl DefaultValue {
-    pub fn eval(&self) -> Result<String, PlatesError> {
+    pub fn eval(&self) -> PlatesResult<String> {
         match self.kind {
             DefaultValueType::Str => Ok(self.value.clone()),
             DefaultValueType::Shell => {
@@ -55,10 +55,7 @@ pub struct Placeholder {
 }
 
 impl Placeholder {
-    pub fn inquire_value(
-        &self,
-        placeholder_values: &PlaceholderValueMap,
-    ) -> Result<String, PlatesError> {
+    pub fn inquire_value(&self, placeholder_values: &PlaceholderValueMap) -> PlatesResult<String> {
         let message = self
             .message
             .clone()
@@ -89,7 +86,7 @@ impl Placeholder {
 pub fn inquire_placeholders(
     placeholders: Vec<Placeholder>,
     placeholder_values: &mut PlaceholderValueMap,
-) -> Result<(), PlatesError> {
+) -> PlatesResult<()> {
     for placeholder in placeholders {
         let value = placeholder.inquire_value(placeholder_values)?;
         placeholder_values.insert(placeholder.name, value);

@@ -1,9 +1,11 @@
 use std::{env::VarError, io, process::ExitStatus};
 
-use derive_more::{Display, Error, From};
+use derive_more::{Display, Error, From, IsVariant};
 use inquire::InquireError;
 
-#[derive(Debug, Display, From, Error)]
+pub type PlatesResult<T> = Result<T, PlatesError>;
+
+#[derive(Debug, Display, From, Error, IsVariant)]
 pub enum PlatesError {
     Inquire(InquireError),
     Io(io::Error),
@@ -16,7 +18,7 @@ pub enum PlatesError {
     #[display("failed to run a command with status {_0}")]
     Shell(#[error(not(source))] ExitStatus),
     #[display("no templates available")]
-    NoTemplates,
+    NoTemplatesAvailable,
     #[display("non-existent template")]
     NonExistentTemplate,
     #[display("the given path is a file")]
